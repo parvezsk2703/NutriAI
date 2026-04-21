@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "userProfile": {
+      "title": "User Profile",
+      "description": "User's health data and nutrition goals",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "age": { "type": "integer" },
+        "gender": { "type": "string", "enum": ["male", "female", "other"] },
+        "weight_kg": { "type": "number" },
+        "height_cm": { "type": "number" },
+        "goal": { "type": "string", "enum": ["lose", "maintain", "gain"] },
+        "activityLevel": { "type": "string", "enum": ["sedentary", "light", "moderate", "active"] },
+        "dietaryRestrictions": { "type": "array", "items": { "type": "string" } },
+        "tdee_calories": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "age", "gender", "weight_kg", "height_cm", "goal"]
+    },
+    "diaryEntry": {
+      "title": "Diary Entry",
+      "description": "A single food or meal entry in the user's diary",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "food_name": { "type": "string" },
+        "meal_type": { "type": "string", "enum": ["breakfast", "lunch", "dinner", "snack"] },
+        "calories": { "type": "number" },
+        "protein_g": { "type": "number" },
+        "carbs_g": { "type": "number" },
+        "fat_g": { "type": "number" },
+        "fiber_g": { "type": "number" },
+        "time": { "type": "string", "format": "date-time" },
+        "source": { "type": "string", "enum": ["manual", "ai_analysis", "search", "barcode"] }
+      },
+      "required": ["id", "food_name", "meal_type", "calories"]
+    },
+    "mealPlan": {
+      "title": "Meal Plan",
+      "description": "A 7-day generated meal plan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "completed", "archived"] },
+        "days": { "type": "array" }
+      }
+    }
+  },
+  "firestore": {
+    "users/{userId}/profile/main": {
+      "schema": "userProfile",
+      "description": "Primary profile data for a user"
+    },
+    "users/{userId}/diary/{date}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "entries": { "type": "array", "items": { "$ref": "#/entities/diaryEntry" } },
+          "totals": { "type": "object" },
+          "water_ml": { "type": "number" },
+          "notes": { "type": "string" },
+          "streak_day": { "type": "number" }
+        }
+      },
+      "description": "Daily food log for a user"
+    },
+    "users/{userId}/mealPlans/{planId}": {
+      "schema": "mealPlan",
+      "description": "Generated meal plans for a user"
+    }
+  }
+}
