@@ -18,12 +18,27 @@ export default function Home() {
   const { user } = useAppStore();
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
   const handleStart = async () => {
     if (user) {
       navigate('/dashboard');
-    } else {
-      await authService.login();
-      navigate('/dashboard');
+      return;
+    }
+
+    try {
+      const loggedInUser = await authService.login();
+      if (loggedInUser) {
+        // We wait a tiny bit to let the global store catch the login state
+        console.log("Login successful, preparing to redirect...");
+        setTimeout(() => navigate('/dashboard'), 800);
+      }
+    } catch (error) {
+      console.log("Login flow was interrupted or failed.");
     }
   };
 

@@ -49,10 +49,20 @@ export const authService = {
 
   async login() {
     try {
+      console.log("Starting sign-in with popup...");
       const result = await signInWithPopup(auth, googleProvider);
+      console.log("Sign-in successful, user:", result.user.uid);
       return result.user;
-    } catch (error) {
-      console.error("Login failed:", error);
+    } catch (error: any) {
+      console.error("Detailed Login Error:", error);
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        alert("The login window was closed before finishing. Please make sure your browser isn't blocking popups or third-party cookies.");
+      } else if (error.code === 'auth/unauthorized-domain') {
+        alert("Domain Error: This URL is not yet authorized in your Firebase console under Authentication > Settings > Authorized Domains.");
+      } else {
+        alert(`Login failed: ${error.message}`);
+      }
       throw error;
     }
   },
