@@ -1,40 +1,33 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { PROMPTS } from "../constants";
 import { MealAnalysis, MealPlan } from "../types/nutrition.types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+import axios from 'axios';
 
 export const geminiService = {
   /**
-   * Analyzes an image of a meal to extract nutritional information.
+   * Analyzes an image of a meal to extract nutritional information via server proxy.
    */
   async analyzeMeal(base64Image: string, mimeType: string): Promise<MealAnalysis> {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [
-          {
-            parts: [
-              { text: PROMPTS.MEAL_ANALYSIS },
-              { inlineData: { data: base64Image, mimeType } }
-            ]
-          }
-        ],
-        config: {
-          responseMimeType: "application/json"
-        }
+      const response = await axios.post('/api/ai/analyze', {
+        image: base64Image,
+        mimeType,
+        prompt: PROMPTS.MEAL_ANALYSIS
       });
 
-      if (!response.text) throw new Error("No response from Gemini");
-      return JSON.parse(response.text.trim());
+      const text = response.data.text;
+      if (!text) throw new Error("No response from AI service");
+      
+      // Clean up potential markdown formatting from AI response
+      const cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
+      return JSON.parse(cleanJson);
     } catch (error) {
-      console.error("Gemini meal analysis failed:", error);
+      console.error("Meal analysis failed:", error);
       throw error;
     }
   },
 
   /**
-   * Generates a 7-day meal plan based on user profile.
+   * Generates a 7-day meal plan based on user profile via server proxy.
    */
   async generateMealPlan(
     age: number,
@@ -47,16 +40,14 @@ export const geminiService = {
   ): Promise<MealPlan> {
     try {
       const prompt = PROMPTS.MEAL_PLAN(age, gender, weight, height, goal, restrictions, tdee);
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
+      const response = await axios.post('/api/ai/plan', { prompt });
 
-      if (!response.text) throw new Error("No response from Gemini");
-      const data = JSON.parse(response.text.trim());
+      const text = response.data.text;
+      if (!text) throw new Error("No response from AI service");
+      
+      const cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
+      const data = JSON.parse(cleanJson);
+      
       return {
         ...data,
         id: crypto.randomUUID(),
@@ -64,7 +55,7 @@ export const geminiService = {
         status: 'active'
       };
     } catch (error) {
-      console.error("Gemini meal planning failed:", error);
+      console.error("Meal planning failed:", error);
       throw error;
     }
   }
