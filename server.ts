@@ -1,5 +1,4 @@
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
@@ -20,27 +19,26 @@ async function startServer() {
 
   // API health check
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok' });
+    res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
-  // Serve the app
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
+  const distPath = path.resolve(__dirname, 'dist');
+  console.log(`Server starting... serving from ${distPath}`);
+
+  // Serve static files
+  app.use(express.static(distPath));
+
+  // Fallback to index.html for SPA
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`NutriAI running on port ${PORT}`);
+    console.log(`NutriAI Production Server running on port ${PORT}`);
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("FAILED TO START SERVER:", err);
+  process.exit(1);
+});
