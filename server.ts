@@ -9,32 +9,38 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
+  console.log('--- NutriAI Server Starting ---');
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Working Directory: ${process.cwd()}`);
+  
   const app = express();
   const PORT = 3000;
 
   app.use(helmet({
-    contentSecurityPolicy: false, // For development with Vite
+    contentSecurityPolicy: false,
   }));
   app.use(cors());
   app.use(express.json());
 
   // API Routes
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', service: 'NutriAI API' });
+    console.log('[Health Check] Received request');
+    res.json({ status: 'ok', service: 'NutriAI API', timestamp: new Date().toISOString() });
   });
-
-  // Proxy for USDA API or other backend tasks could go here
-  // But for this project, direct Firebase/Gemini from frontend is preferred for AI Studio environment
 
   // Vite middleware setup
   if (process.env.NODE_ENV !== 'production') {
+    console.log('Initializing Vite dev server middleware...');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
+    console.log('Vite middleware ready.');
   } else {
     const distPath = path.join(process.cwd(), 'dist');
+    console.log(`Serving static files from: ${distPath}`);
+    
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
@@ -42,7 +48,8 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`>>> Server listening on 0.0.0.0:${PORT}`);
+    console.log(`>>> Health check available at http://localhost:${PORT}/api/health`);
   });
 }
 

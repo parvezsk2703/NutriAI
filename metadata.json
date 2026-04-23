@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
-  "requestFramePermissions": [],
+  "name": "NutriAI",
+  "description": "AI-powered nutrition tracking and planning application using Gemini.",
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": []
 }
