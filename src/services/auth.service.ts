@@ -14,16 +14,35 @@ const googleProvider = new GoogleAuthProvider();
 
 export const authService = {
   init() {
+    console.log("Initializing Auth Service...");
+    const { setUser, setProfile, setLoading } = useAppStore.getState();
+    
+    // Safety timeout to prevent infinite loading if Firebase hangs
+    const timeout = setTimeout(() => {
+      console.warn("Auth initialization timed out. Proceeding as unauthenticated.");
+      setLoading(false);
+    }, 10000);
+
     return onAuthStateChanged(auth, async (user) => {
-      const { setUser, setProfile, setLoading } = useAppStore.getState();
+      clearTimeout(timeout);
+      console.log("Auth state changed:", user ? `User logged in: ${user.uid}` : "No user logged in");
+      
       setUser(user);
       
       if (user) {
-        const profile = await this.getProfile(user.uid);
-        setProfile(profile);
+        try {
+          const profile = await this.getProfile(user.uid);
+          setProfile(profile);
+        } catch (err) {
+          console.error("Failed to load user profile:", err);
+        }
       } else {
         setProfile(null);
       }
+      setLoading(false);
+    }, (error) => {
+      clearTimeout(timeout);
+      console.error("Auth initialization error:", error);
       setLoading(false);
     });
   },
