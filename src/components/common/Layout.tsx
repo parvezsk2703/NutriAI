@@ -19,7 +19,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user, profile } = useAppStore();
+  const { user, profile, isSigningIn } = useAppStore();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -99,9 +99,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             ) : (
               <button 
                 onClick={() => authService.login()}
-                className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-semibold shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all"
+                disabled={isSigningIn}
+                className={`bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-semibold shadow-lg transition-all ${
+                  isSigningIn 
+                    ? 'opacity-50 cursor-not-allowed shadow-none scale-95' 
+                    : 'shadow-blue-200 hover:bg-blue-700 active:scale-95'
+                }`}
               >
-                Sign In
+                {isSigningIn ? 'Signing In...' : 'Sign In'}
               </button>
             )}
           </div>

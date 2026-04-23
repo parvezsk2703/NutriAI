@@ -48,7 +48,15 @@ export const authService = {
   },
 
   async login() {
+    const { isSigningIn, setSigningIn } = useAppStore.getState();
+    
+    if (isSigningIn) {
+      console.log("Sign-in already in progress, ignoring second request.");
+      return null;
+    }
+
     try {
+      setSigningIn(true);
       console.log("Starting sign-in with popup...");
       const result = await signInWithPopup(auth, googleProvider);
       console.log("Sign-in successful, user:", result.user.uid);
@@ -57,13 +65,18 @@ export const authService = {
       console.error("Detailed Login Error:", error);
       
       if (error.code === 'auth/popup-closed-by-user') {
-        alert("The login window was closed before finishing. Please make sure your browser isn't blocking popups or third-party cookies.");
+        alert("Login window closed. Please try again and wait for the window to finish.");
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // Just log it, usually caused by clicking twice
+        console.warn("Popup request was cancelled (likely double click).");
       } else if (error.code === 'auth/unauthorized-domain') {
-        alert("Domain Error: This URL is not yet authorized in your Firebase console under Authentication > Settings > Authorized Domains.");
+        alert("Domain Error: Please add " + window.location.hostname + " to your Firebase Authorized Domains.");
       } else {
         alert(`Login failed: ${error.message}`);
       }
-      throw error;
+      return null;
+    } finally {
+      setSigningIn(false);
     }
   },
 

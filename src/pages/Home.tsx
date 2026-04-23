@@ -15,7 +15,7 @@ import { useAppStore } from '../store/appStore';
 import { motion } from 'motion/react';
 
 export default function Home() {
-  const { user } = useAppStore();
+  const { user, isSigningIn } = useAppStore();
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -25,6 +25,8 @@ export default function Home() {
   }, [user, navigate]);
 
   const handleStart = async () => {
+    if (isSigningIn) return;
+    
     if (user) {
       navigate('/dashboard');
       return;
