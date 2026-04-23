@@ -1,6 +1,8 @@
 import { 
   onAuthStateChanged, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider, 
   signOut,
   User
@@ -11,12 +13,24 @@ import { useAppStore } from '../store/appStore';
 import { UserProfile } from '../types/user.types';
 
 const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 export const authService = {
+  useRedirect: false,
+
   init() {
     console.log("Initializing Auth Service...");
     const { setUser, setProfile, setLoading } = useAppStore.getState();
     
+    // Check for redirect result on boot
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) {
+        console.log("Returned from redirect successfully:", result.user.email);
+      }
+    }).catch((error) => {
+      console.error("Redirect login error:", error);
+    });
+
     // Safety timeout to prevent infinite loading if Firebase hangs
     const timeout = setTimeout(() => {
       console.warn("Auth initialization timed out. Proceeding as unauthenticated.");
@@ -47,17 +61,25 @@ export const authService = {
     });
   },
 
-  async login() {
+  async login(forceRedirect = false) {
     const { isSigningIn, setSigningIn } = useAppStore.getState();
     
-    if (isSigningIn) {
+    if (isSigningIn && !forceRedirect) {
       console.log("Sign-in already in progress, ignoring second request.");
       return null;
     }
 
     try {
       setSigningIn(true);
-      console.log("Starting sign-in with popup for domain:", window.location.hostname);
+      const domain = window.location.hostname;
+
+      if (forceRedirect || this.useRedirect) {
+        console.log("Using Redirect login mode...");
+        await signInWithRedirect(auth, googleProvider);
+        return null; // Page will unload soon
+      }
+
+      console.log("Starting sign-in with popup for domain:", domain);
       const result = await signInWithPopup(auth, googleProvider);
       console.log("Sign-in successful, user:", result.user.uid);
       return result.user;
@@ -66,20 +88,20 @@ export const authService = {
       
       const domain = window.location.hostname;
       
-      if (error.code === 'auth/popup-closed-by-user') {
-        alert(`LOGIN FAILED:\n\n1. Check if your browser blocked a popup.\n2. Ensure "${domain}" is added to "Authorized Domains" in your Firebase Auth settings.`);
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        console.warn("Popup request was cancelled (likely double click).");
+      if (error.code === 'auth/popup-closed-by-user' || (error.code === 'auth/internal-error' && error.message.includes('popup'))) {
+        this.useRedirect = true;
+        const fallback = confirm("Popup blocked or closed instantly. \n\nWould you like to try the 'Redirect' method instead? (More reliable, refreshes the page)");
+        if (fallback) {
+          return this.login(true);
+        }
       } else if (error.code === 'auth/unauthorized-domain') {
-        alert(`DOMAIN ERROR:\n\nYou must add "${domain}" to your Firebase Authorized Domains.\n\nGo to: Firebase Console > Auth > Settings > Authorized Domains.`);
-      } else if (error.code === 'auth/internal-error' && error.message.includes('popup')) {
-        alert("Browser Error: Your browser blocked the login popup. Please allow popups for this site.");
+        alert(`DOMAIN ERROR:\nYou must authorize "${domain}" in Firebase.`);
       } else {
         alert(`Login failed (${error.code}): ${error.message}`);
       }
       return null;
     } finally {
-      setSigningIn(false);
+      if (!this.useRedirect) setSigningIn(false);
     }
   },
 
