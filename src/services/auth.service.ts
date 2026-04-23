@@ -57,22 +57,25 @@ export const authService = {
 
     try {
       setSigningIn(true);
-      console.log("Starting sign-in with popup...");
+      console.log("Starting sign-in with popup for domain:", window.location.hostname);
       const result = await signInWithPopup(auth, googleProvider);
       console.log("Sign-in successful, user:", result.user.uid);
       return result.user;
     } catch (error: any) {
-      console.error("Detailed Login Error:", error);
+      console.error("Detailed Login Error Object:", error);
+      
+      const domain = window.location.hostname;
       
       if (error.code === 'auth/popup-closed-by-user') {
-        alert("Login window closed. Please try again and wait for the window to finish.");
+        alert(`LOGIN FAILED:\n\n1. Check if your browser blocked a popup.\n2. Ensure "${domain}" is added to "Authorized Domains" in your Firebase Auth settings.`);
       } else if (error.code === 'auth/cancelled-popup-request') {
-        // Just log it, usually caused by clicking twice
         console.warn("Popup request was cancelled (likely double click).");
       } else if (error.code === 'auth/unauthorized-domain') {
-        alert("Domain Error: Please add " + window.location.hostname + " to your Firebase Authorized Domains.");
+        alert(`DOMAIN ERROR:\n\nYou must add "${domain}" to your Firebase Authorized Domains.\n\nGo to: Firebase Console > Auth > Settings > Authorized Domains.`);
+      } else if (error.code === 'auth/internal-error' && error.message.includes('popup')) {
+        alert("Browser Error: Your browser blocked the login popup. Please allow popups for this site.");
       } else {
-        alert(`Login failed: ${error.message}`);
+        alert(`Login failed (${error.code}): ${error.message}`);
       }
       return null;
     } finally {
