@@ -25,8 +25,14 @@ async function startServer() {
   const distPath = path.resolve(__dirname, 'dist');
   console.log(`Server starting... serving from ${distPath}`);
 
-  // Serve static files
-  app.use(express.static(distPath));
+  // Serve static files with no-cache to prevent blank page issues after updates
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      if (path.extname(filePath) === '.html') {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    }
+  }));
 
   // Fallback to index.html for SPA
   app.get('*', (req, res) => {
